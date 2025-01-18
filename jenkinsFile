@@ -33,7 +33,7 @@ pipeline {
         }
         stage('Build') {
             steps {
-                sh "cd jenkin-ans-k8s && mvn clean install"
+                sh "mvn clean install"
             }
         }
         stage('Docker-Build') {
@@ -45,7 +45,7 @@ pipeline {
             }
             steps {
                 script {
-                    sh 'cd jenkin-ans-k8s && docker build -t rajuhp/simple-devops-image:$BUILD_NUMBER .'
+                    sh 'docker build -t rajuhp/simple-devops-image:$BUILD_NUMBER .'
                     def dockerImage = docker.image("${DOCKER_IMAGE}")
                     docker.withRegistry('https://index.docker.io/v1/', "docker-hub-rajuhp") {
                         dockerImage.push()                    
