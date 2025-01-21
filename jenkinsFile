@@ -6,12 +6,22 @@ pipeline {
         SCANNER_HOME=tool 'sonarqube'
     }
     stages {
-        stage('Checkout') {
+        stage('Git checkout') {
             steps {
                 git 'https://github.com/rajuhpr/sonarqube_analysys.git'
             }
         }
-        stage('SonarQube Analysis') {
+        stage('Compile code') {
+            steps {
+                sh "mvn clean compile"
+            }
+        }
+        stage('code test') {
+            steps {
+                sh "mvn test"
+            }
+        }
+        stage('Sonarqube analysis') {
             steps {
                 withSonarQubeEnv('sonar'){
                     sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=devops_demo \
@@ -31,5 +41,29 @@ pipeline {
                 }
             }
         }
+        stage('Build') {
+            steps {
+                sh "cd jenkin-ans-k8s && mvn clean install"
+            }
+        }
+        stage('Docker-Build') {
+            environment {
+                DOCKERHUB_CREDENTIALS = credentials('docker-hub-rajuhp')
+                DOCKER_IMAGE = "rajuhp/simple-devops-image:${BUILD_NUMBER}"
+
+                // REGISTRY_CREDENTIALS = credentials('docker-hub-rajuhp')
+            }
+            steps {
+                script {
+                    sh 'cd jenkin-ans-k8s && docker build -t rajuhp/simple-devops-image:$BUILD_NUMBER .'
+                    def dockerImage = docker.image("${DOCKER_IMAGE}")
+                    docker.withRegistry('https://index.docker.io/v1/', "docker-hub-rajuhp") {
+                        dockerImage.push()                    
+                }
+
+                }
+            }
+        }  
+        
     }
 }
