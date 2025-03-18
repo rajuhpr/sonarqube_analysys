@@ -1,69 +1,22 @@
 pipeline {
     agent any
-    environment{
+    environment {
         PATH = "/opt/maven/bin:$PATH"
-        //sonarqube is the env name of Jenkin UI
-        SCANNER_HOME=tool 'sonarqube'
     }
     stages {
-        stage('Git checkout') {
+        stage('Git') {
             steps {
-                git 'https://github.com/rajuhpr/sonarqube_analysys.git'
-            }
-        }
-        stage('Compile code') {
-            steps {
-                sh "mvn clean compile"
-            }
-        }
-        stage('code test') {
-            steps {
-                sh "mvn test"
-            }
-        }
-        stage('Sonarqube analysis') {
-            steps {
-                withSonarQubeEnv('sonar'){
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=devops_demo \
-                    -Dsonar.java.binaries=. \
-                    -Dsonar.projectKey=devops_demo '''
-
-                }
-            }
-        }
-        stage('Quality Gate') {
-            steps {
-                script {
-                    def qualityGate = waitForQualityGate()
-                    if (qualityGate.status != 'OK') {
-                        error "Pipeline aborted due to quality gate failure: ${qualityGate.status}"
-                    }
-                }
+                git branch: 'main', changelog: false, poll: false, url: 'https://github.com/rajuhpr/DevOps-demo.git'
+                echo "Git clone is success! "
             }
         }
         stage('Build') {
             steps {
                 sh "cd jenkin-ans-k8s && mvn clean install"
             }
-        }
-        stage('Docker-Build') {
-            environment {
-                DOCKERHUB_CREDENTIALS = credentials('docker-hub-rajuhp')
-                DOCKER_IMAGE = "rajuhp/simple-devops-image:${BUILD_NUMBER}"
-
-                // REGISTRY_CREDENTIALS = credentials('docker-hub-rajuhp')
-            }
-            steps {
-                script {
-                    sh 'cd jenkin-ans-k8s && docker build -t rajuhp/simple-devops-image:$BUILD_NUMBER .'
-                    def dockerImage = docker.image("${DOCKER_IMAGE}")
-                    docker.withRegistry('https://index.docker.io/v1/', "docker-hub-rajuhp") {
-                        dockerImage.push()                    
-                }
-
-                }
-            }
-        }  
-        
+        }        
     }
 }
+
+
+
